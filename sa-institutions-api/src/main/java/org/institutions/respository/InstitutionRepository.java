@@ -1,11 +1,12 @@
 package org.institutions.respository;
 
 import org.institutions.model.Institution;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.List;
 
 public interface InstitutionRepository extends JpaRepository<Institution, Long> {
-    List<Institution> findByProvince(String province);
-    List<Institution> findByType(String type);
-    List<Institution> findByProvinceAndType(String province, String type); // New method added
+    Page<Institution> findByProvince(String province, Pageable pageable);
+    Page<Institution> findByType(String type, Pageable pageable);
+    Page<Institution> findByProvinceAndType(String province, String type, Pageable pageable);
 }

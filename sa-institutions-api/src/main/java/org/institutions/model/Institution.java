@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "institutions")
+@Table(name = "institution")
 public class Institution {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -15,5 +15,5 @@ public class Institution {
     private String type;
     private String province;
     private String website;
-    private String accreditation;  // e.g., "CHE", "DHET"
+    private String accreditation;
 }
