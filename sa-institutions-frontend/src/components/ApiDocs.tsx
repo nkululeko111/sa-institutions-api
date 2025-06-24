@@ -8,7 +8,6 @@ import {
   TextField,
   Button,
   Box,
-  Divider,
   Chip
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -18,10 +17,26 @@ import { useSnackbar } from 'notistack';
 const ApiDocs = () => {
   const { enqueueSnackbar } = useSnackbar();
   const [apiKey, setApiKey] = useState('your-api-key-here');
-  const [exampleResponse, setExampleResponse] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  // Store response per endpoint path (string) to allow multiple responses
+  const [exampleResponses, setExampleResponses] = useState<Record<string, any>>({});
+  const [loadingEndpoint, setLoadingEndpoint] = useState<string | null>(null);
 
-  const endpoints = [
+  type EndpointParameter = {
+    name: string;
+    type: string;
+    required: boolean;
+    example?: string;
+  };
+
+  type Endpoint = {
+    method: string;
+    path: string;
+    description: string;
+    parameters: EndpointParameter[];
+    example: string;
+  };
+
+  const endpoints: Endpoint[] = [
     {
       method: 'GET',
       path: '/api/institutions',
@@ -59,16 +74,27 @@ const ApiDocs = () => {
     enqueueSnackbar('Copied to clipboard!', { variant: 'success' });
   };
 
-  const tryEndpoint = async (url: string) => {
-    setLoading(true);
+  const tryEndpoint = async (url: string, path: string) => {
+    setLoadingEndpoint(path);
+    setExampleResponses(prev => ({ ...prev, [path]: null })); // clear previous response
+
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
-      setExampleResponse(data);
+      setExampleResponses(prev => ({ ...prev, [path]: data }));
+      enqueueSnackbar('Response fetched successfully!', { variant: 'success' });
     } catch (error) {
-      enqueueSnackbar('Error fetching data', { variant: 'error' });
+      enqueueSnackbar(`Error fetching data: ${error}`, { variant: 'error' });
+      setExampleResponses(prev => ({ ...prev, [path]: { error: String(error) } }));
     } finally {
-      setLoading(false);
+      setLoadingEndpoint(null);
     }
   };
 
@@ -101,7 +127,7 @@ const ApiDocs = () => {
             Copy
           </Button>
         </Box>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
           Include in headers: <code>Authorization: Bearer {apiKey}</code>
         </Typography>
       </Box>
@@ -132,7 +158,7 @@ const ApiDocs = () => {
                     <li key={i}>
                       <Typography variant="body2">
                         <code>{param.name}</code> ({param.type}) - {param.required ? 'Required' : 'Optional'}
-                        {'example' in param && ` - Example: ${param.example}`}
+                        {param.example && ` - Example: ${param.example}`}
                       </Typography>
                     </li>
                   ))}
@@ -158,18 +184,19 @@ const ApiDocs = () => {
             <Button
               variant="contained"
               size="small"
-              onClick={() => tryEndpoint(endpoint.example)}
-              disabled={loading}
+              onClick={() => tryEndpoint(endpoint.example, endpoint.path)}
+              disabled={loadingEndpoint === endpoint.path}
+              sx={{ mb: 2 }}
             >
-              Try it out
+              {loadingEndpoint === endpoint.path ? 'Loading...' : 'Try it out'}
             </Button>
 
-            {exampleResponse && endpoint.example === window.location.origin + endpoint.path && (
+            {exampleResponses[endpoint.path] && (
               <>
                 <Typography variant="subtitle2" sx={{ mt: 2 }}>Example Response:</Typography>
-                <Paper variant="outlined" sx={{ p: 2 }}>
+                <Paper variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', overflowX: 'auto' }}>
                   <pre style={{ margin: 0 }}>
-                    {JSON.stringify(exampleResponse, null, 2)}
+                    {JSON.stringify(exampleResponses[endpoint.path], null, 2)}
                   </pre>
                 </Paper>
               </>
